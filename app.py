@@ -38,7 +38,7 @@ with st.sidebar:
     api_key = st.text_input("API key (session-only, never stored)", type="password") if provider != "None (rule-based fallback)" else None
     model_name = None
     if provider == "Anthropic (Claude)":
-        model_name = st.text_input("Model", value="claude-sonnet-4-5-20250929")
+        model_name = st.text_input("Model", value="claude-sonnet-5")
     elif provider == "OpenAI (GPT)":
         model_name = st.text_input("Model", value="gpt-4o-mini")
 
@@ -52,7 +52,8 @@ def call_llm(prompt, provider, api_key, model_name):
             json={"model": model_name, "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
             timeout=30,
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            raise RuntimeError(f"Anthropic API error {resp.status_code}: {resp.text[:500]}")
         data = resp.json()
         return "".join(b["text"] for b in data["content"] if b["type"] == "text")
     elif provider == "OpenAI (GPT)":
@@ -62,7 +63,8 @@ def call_llm(prompt, provider, api_key, model_name):
             json={"model": model_name, "messages": [{"role": "user", "content": prompt}], "max_tokens": 800},
             timeout=30,
         )
-        resp.raise_for_status()
+        if not resp.ok:
+            raise RuntimeError(f"OpenAI API error {resp.status_code}: {resp.text[:500]}")
         data = resp.json()
         return data["choices"][0]["message"]["content"]
     else:
